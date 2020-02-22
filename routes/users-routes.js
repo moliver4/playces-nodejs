@@ -1,13 +1,26 @@
 const express = require('express');
+const { check } = require('express-validator');
+
+const usersController = require('../controllers/users-controllers');
 
 const router = express.Router();
 
-router.get('/:uid', (req, res, next) => {
-  const userId = req.params.pid; // { pid: 'p1' }
-  const user = DUMMY_PLACES.find(p => {
-    return p.id === userId;
-  });
-  res.json({user}); // => { place } => { place: place }
-});
+router.get('/', usersController.getUsers);
+
+router.post(
+    '/signup',
+    [
+      check('name')
+        .not()
+        .isEmpty(),
+      check('email')
+        .normalizeEmail() // Test@test.com => test@test.com
+        .isEmail(),
+      check('password').isLength({ min: 6 })
+    ],
+    usersController.signup
+  );
+
+router.post('/login', usersController.login);
 
 module.exports = router;

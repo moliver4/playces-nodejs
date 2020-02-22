@@ -12,6 +12,7 @@ const app = express();
 app.use(bodyParser.json()); //parses for any json data and automatically calls next
 
 app.use('/api/places', placesRoutes); // => /api/places...
+app.use('/api/users', usersRoutes);
 
 app.use((req,res,next)=>{
     const error = new HttpError('could not find this route', 404)
