@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const HttpError = require('./models/http-error');
+require('dotenv').config()
 
 const placesRoutes = require('./routes/places-routes');
 const usersRoutes = require('./routes/users-routes');
