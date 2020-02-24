@@ -19,7 +19,10 @@ app.use((req,res,next)=>{
     const error = new HttpError('could not find this route', 404)
     throw error
 })
+
+//4 parameters, express knows it is an error handling middleware
 app.use((error, req, res, next) => {
+  //if a response has already been sent, we just call next and forward it
     if (res.headerSent) {
       return next(error);
     }
