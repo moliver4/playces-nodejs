@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
-const uuid = require('uuid/v4');
 
+const Place = require("../models/place");
 const HttpError = require('../models/http-error');
 const getCoordsForAddress = require('../util/location');
 
@@ -18,18 +18,32 @@ let DUMMY_PLACES = [
     }
   ];
 
-const getPlaceById =(req, res, next) => {
+const getPlaceById = async (req, res, next) => {
     const placeId = req.params.pid; // { pid: 'p1' }
   
-    const place = DUMMY_PLACES.find(p => {
-      return p.id === placeId;
-    });
-  
-    if (!place) {
-      throw new HttpError('Could not find a place for the provided id.', 404);
+    //static method, not used on the instance, on the whole collection
+    //not a real promise async but can still use async await (mongoose specific)
+    //use exec if you need a real promise
+    let place;
+    try { 
+      place = await Place.findById(placeId)
+    } catch (err) {
+      const error = new HttpError (
+        'Something went wrong, could not find the place', 500
+      )
+      return next(error)
     }
-  
-    res.json({ place }); // => { place } => { place: place }
+    //these are two different error requests. one is a network error and one is a db error
+    if (!place) {
+      const error = new HttpError('Could not find a place for the provided id.', 404);
+      return next(error)
+    }
+    
+    //want to get rid of the _id property from db
+    //mongoose adds an id getter to every document that returns id as a string
+    //sometimes its lost when we do toObject, but now its true with getters true
+    //mongoose knows to add id property to obejct
+    res.json({ place: place.toObject({ getters:true }) }); 
 };
 
 const getPlacesByUserId = (req, res, next) => {
@@ -66,21 +80,30 @@ const getPlacesByUserId = (req, res, next) => {
       return next(error);
     }
   
-    // const title = req.body.title;
-    const createdPlace = {
-      id: uuid(),
+  // const title = req.body.title;
+    const createdPlace = new Place({
       title,
       description,
-      location: coordinates,
       address,
+      location: coordinates,
+      image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Empire_State_Building_%28aerial_view%29.jpg/400px-Empire_State_Building_%28aerial_view%29.jpg',
       creator
-    };
+    });
   
-    DUMMY_PLACES.push(createdPlace); //unshift(createdPlace)
-  
+    try {
+      await createdPlace.save();
+    } catch (err) {
+      const error = new HttpError(
+        'Creating place failed, please try again.',
+        500
+      );
+      return next(error);
+    }
+    
     res.status(201).json({ place: createdPlace });
   };
-  
+
+
   const updatePlace = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
