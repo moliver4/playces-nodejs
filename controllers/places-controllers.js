@@ -6,22 +6,8 @@ const Place = require("../models/place");
 const HttpError = require('../models/http-error');
 const getCoordsForAddress = require('../util/location');
 
-let DUMMY_PLACES = [
-    {
-      id: 'p1',
-      title: 'Empire State Building',
-      description: 'One of the most famous sky scrapers in the world!',
-      location: {
-        lat: 40.7484474,
-        lng: -73.9871516
-      },
-      address: '20 W 34th St, New York, NY 10001',
-      creator: 'u1'
-    }
-  ];
-
 const getPlaceById = async (req, res, next) => {
-    const placeId = req.params.pid; // { pid: 'p1' }
+    const placeId = req.params.pid;
   
     //static method, not used on the instance, on the whole collection
     //not a real promise async but can still use async await (mongoose specific)
@@ -173,10 +159,10 @@ const getPlacesByUserId = async (req, res, next) => {
         'Something went wrong, could not find the place', 500
       )
       return next(error)
-    }
+    }  
     
-        place.title = title;
-        place.description = description;
+    place.title = title;
+    place.description = description;
 
     try {
       await place.save();
@@ -187,8 +173,6 @@ const getPlacesByUserId = async (req, res, next) => {
       );
       return next(error);
     }
-  
-  
     res.status(200).json({place: place.toObject( { getters: true })});
   };
 
@@ -226,7 +210,6 @@ const getPlacesByUserId = async (req, res, next) => {
       )
       return next(error)
     }
-
     res.status(200).json({message: 'Deleted place successfully'})
   };
   
