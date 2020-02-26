@@ -1,5 +1,7 @@
 const { validationResult } = require('express-validator');
+const mongoose = require("mongoose");
 
+const User = require('../models/user')
 const Place = require("../models/place");
 const HttpError = require('../models/http-error');
 const getCoordsForAddress = require('../util/location');
@@ -51,9 +53,14 @@ const getPlacesByUserId = async (req, res, next) => {
   
     //mongodb usually returns a cursor so you dont bloat your data
     //mongoose just plain array
-    let places ;
+
+    //original code commented out. refactored with populate method. 
+    //instead of sifting through all places, now we are using populate on the exact user.
+    // let places ;
+    let userWithPlaces;
     try {
-      places = await Place.find({ creator: userId })
+      // places = await Place.find({ creator: userId })
+      userWithPlaces = await User.findById(userId).populate('places')
     } catch (err) {
       const error = new HttpError (
         'Fetching places failed, please try again later', 500
@@ -61,13 +68,13 @@ const getPlacesByUserId = async (req, res, next) => {
       return next(error)
     }
 
-    if (!places || places.length === 0) {
+    if (!userWithPlaces || userWithPlaces.places.length === 0) {
       return next(
         new HttpError('Could not find a place for the provided user id.', 404)
       );
     }
   
-    res.json({ places: places.map(place => place.toObject({ getters: true })) });
+    res.json({ places: userWithPlaces.places.map(place => place.toObject({ getters: true })) });
   }
 
   const createPlace = async (req, res, next) => {
@@ -97,9 +104,46 @@ const getPlacesByUserId = async (req, res, next) => {
       image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Empire_State_Building_%28aerial_view%29.jpg/400px-Empire_State_Building_%28aerial_view%29.jpg',
       creator
     });
-  
+
+    //need to check if user is in DB before can create place
+    let user;
     try {
-      await createdPlace.save();
+      user = await User.findById(creator);
+    } catch (err) {
+      const error = new HttpError(
+        'Creating place failed, please try again.',
+        500
+      );
+      return next(error);
+    }
+  
+    if (!user) {
+      const error = new HttpError(
+        'Could not find user for provided id', 404
+      );
+      return next(error)
+    }
+
+    console.log(user);
+
+    //need to save the place anddddddd add it to the user's info
+    //only if both succeed then we want to change documents
+    //use transactions and sessions
+    //transactions allow to perform multiple operations in isolation and undo them in isolation
+    //built on sessions. need to start session for transaction
+    //only if all things are successful, will the session commit transaction.
+    //otherwise all things will be rolled back by mongodb
+
+    //mongoose 'push' method allows mongoose to establish connection between two models
+    //ONLY actually adds the place's id
+    try {
+     const sess = await mongoose.startSession();
+      sess.startTransaction();
+      await createdPlace.save({ session: sess })
+      user.places.push(createdPlace);
+      await user.save({ session: sess })
+      await sess.commitTransaction();
+
     } catch (err) {
       const error = new HttpError(
         'Creating place failed, please try again.',
@@ -147,12 +191,15 @@ const getPlacesByUserId = async (req, res, next) => {
   
     res.status(200).json({place: place.toObject( { getters: true })});
   };
+
+  //populate method allows us to work with document related to this document and change it
   
   const deletePlace = async (req, res, next) => {
     const placeId = req.params.pid;
     let place;
     try { 
-      place = await Place.findById(placeId)
+      place = await Place.findById(placeId).populate('creator')
+
     } catch (err) {
       const error = new HttpError (
         'Something went wrong, could not find the place', 500
@@ -160,11 +207,22 @@ const getPlacesByUserId = async (req, res, next) => {
       return next(error)
     }
 
+    if (!place) {
+      const error = new HttpError (
+        'Something went wrong, could not find the place', 404
+      )
+      return next(error)
+    }
     try {
-      await place.remove();
+      const sess = await mongoose.startSession();
+      sess.startTransaction();
+      await place.remove({ session: sess });
+      place.creator.places.pull(place);
+      await place.creator.save({ session: sess })
+      await sess.commitTransaction();
     } catch (err) {
       const error = new HttpError (
-        'Something went wrong, could not find the place', 500
+        'Something went wrong, could not delete the place', 500
       )
       return next(error)
     }
