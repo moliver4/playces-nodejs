@@ -12,14 +12,14 @@ const app = express();
 
 //registered as middleware with appjs
 app.use(bodyParser.json()); //parses for any json data and automatically calls next
-
 //adding headers to response
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
-    res.setHeader('Acces-Control-ALlow-Methods', 'GET, POST, PATCH, DELETE')
+    res.setHeader('Access-Control-ALlow-Methods', 'GET, POST, PATCH, DELETE')
     next()
 })
+
 
 app.use("/api/places", placesRoutes); // => /api/places...
 app.use("/api/users", usersRoutes);
