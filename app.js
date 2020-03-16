@@ -1,3 +1,5 @@
+const fs = require('fs') 
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const HttpError = require("./models/http-error");
@@ -10,9 +12,9 @@ const usersRoutes = require("./routes/users-routes");
 
 const app = express();
 
-//registered as middleware with appjs
+
 app.use(bodyParser.json()); //parses for any json data and automatically calls next
-//adding headers to response
+//adding headers to response for CORS 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
@@ -31,6 +33,13 @@ app.use((req, res, next) => {
 
 //4 parameters, express knows it is an error handling middleware
 app.use((error, req, res, next) => {
+  //multer has the file property if we have file
+  //so we know if file exists, the request that failed was stored.
+  if (req.file) {
+    fs.unlink(req.file.path, (err) => {
+      console.log(err)
+    })
+  }
   //if a response has already been sent, we just call next and forward it
   if (res.headerSent) {
     return next(error);
