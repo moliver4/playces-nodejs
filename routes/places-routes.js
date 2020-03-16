@@ -2,6 +2,7 @@ const express = require('express');
 const { check } = require('express-validator');
 
 const placesControllers = require('../controllers/places-controllers')
+const fileUpload = require('../middleware/file-upload')
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ router.get('/user/:uid', placesControllers.getPlacesByUserId);
 //will be executed one by one
 router.post(
     '/',
+    fileUpload.single('image'),
     [
       check('title')
         .not()

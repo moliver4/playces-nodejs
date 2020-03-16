@@ -1,3 +1,5 @@
+const fs = require('fs')
+
 const { validationResult } = require('express-validator');
 const mongoose = require("mongoose");
 
@@ -87,7 +89,7 @@ const getPlacesByUserId = async (req, res, next) => {
       description,
       address,
       location: coordinates,
-      image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Empire_State_Building_%28aerial_view%29.jpg/400px-Empire_State_Building_%28aerial_view%29.jpg',
+      image: req.file.path,
       creator
     });
 
@@ -108,9 +110,7 @@ const getPlacesByUserId = async (req, res, next) => {
         'Could not find user for provided id', 404
       );
       return next(error)
-    }
-
-    console.log(user);
+    };
 
     //need to save the place anddddddd add it to the user's info
     //only if both succeed then we want to change documents
@@ -191,6 +191,8 @@ const getPlacesByUserId = async (req, res, next) => {
       return next(error)
     }
 
+    const imagePath = place.image;
+
     if (!place) {
       const error = new HttpError (
         'Something went wrong, could not find the place', 404
@@ -210,6 +212,11 @@ const getPlacesByUserId = async (req, res, next) => {
       )
       return next(error)
     }
+
+    fs.unlink(imagePath, err => {
+      console.log(err)
+    })
+    
     res.status(200).json({message: 'Deleted place successfully'})
   };
   
