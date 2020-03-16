@@ -1,4 +1,5 @@
 const fs = require('fs') 
+const path = require('path')
 
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -14,6 +15,12 @@ const app = express();
 
 
 app.use(bodyParser.json()); //parses for any json data and automatically calls next
+
+//static serving returns a file, does not execute it
+//control which files in what folder we want to return
+//it wants a path to the folder (absolute) 
+app.use('/uploads/images', express.static(path.join('uploads', 'images')))
+
 //adding headers to response for CORS 
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
@@ -37,7 +44,7 @@ app.use((error, req, res, next) => {
   //so we know if file exists, the request that failed was stored.
   if (req.file) {
     fs.unlink(req.file.path, (err) => {
-      console.log(err)
+      console.log('error, rolling back image', err)
     })
   }
   //if a response has already been sent, we just call next and forward it
